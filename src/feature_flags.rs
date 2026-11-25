@@ -1658,7 +1658,8 @@ fn match_property(
 /// property with the same key could disagree with `/flags`.
 fn check_property_filter_type(property: &Property) -> Result<(), InconclusiveMatchError> {
     match property.property_type.as_deref() {
-        None | Some("") | Some("person") | Some("group") => Ok(()),
+        // Only a filter without a type is a person filter. An empty type is unsupported.
+        None | Some("person" | "group") => Ok(()),
         Some(other) => Err(InconclusiveMatchError::new(&format!(
             "Can't evaluate a '{other}' filter on '{}' locally",
             property.key
@@ -2933,6 +2934,14 @@ mod tests {
     #[test]
     fn person_metadata_filter_is_inconclusive() {
         assert!(match_property(&first_seen_filter("person_metadata"), &created_in_2026()).is_err());
+    }
+
+    #[test]
+    fn only_an_omitted_filter_type_means_person() {
+        let mut filter = first_seen_filter("");
+        assert!(match_property(&filter, &created_in_2026()).is_err());
+        filter.property_type = None;
+        assert!(match_property(&filter, &created_in_2026()).unwrap());
     }
 
     #[test]
